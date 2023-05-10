@@ -6,6 +6,25 @@
 #define DTIME_UNIT      "us"
 
 /////////////////////////////////////////////////////////////////////////////////////
+/// Commands
+/////////////////////////////////////////////////////////////////////////////////////
+
+#define COMMAND_ARRAY_SIZE      6
+#define COMMAND_SEPARATOR       '#' // Always handled as one character!!!
+
+#define CMD_CMD_LOC             0   // Command location
+#define CMD_SEP_LOC             1   // Separator location
+#define CMD_DAT_LOC             2   // Data location
+
+#define CMD_PING                0   // Writes to console...
+#define CMD_SET_FILTER_WINDOW   1
+#define CMD_SET_WANE_TO_OFFSET  2
+#define CMD_SET_WANE_TO_CORRENT 3
+#define CMD_MPU_CALIBRATE       4
+#define CMD_SET_SPEEDMAP        5
+
+
+/////////////////////////////////////////////////////////////////////////////////////
 /// Config
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -17,14 +36,18 @@
 #define WANE_MAX_ANGLE_ADC	0x1000   // 4096, cannot reach.
 #define WANE_MAX_ANGLE_DEG  360
 
-#define SS_ANGLES_DEG	90
+#define SS_ANGLES_DEG	    90
 
-#define MPU_NUM	2
+#define MPU_NUM	            2
 
 #define U_SEC_PER_SEC	    1000000
 #define SERIAL_BUF_SIZE     256
 #define FILTER_WINDOW_SIZE  5
 
+#define EEPROM_SIZE         4096
+#define EEPROM_WATERMARK    1775
+#define EEPROM_LOC_WM       0
+#define EEPROM_LOC_DATA     4
 
 
 /////////////////////////////////////////////////////////////////////////////////////

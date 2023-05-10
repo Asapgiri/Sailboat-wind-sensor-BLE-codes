@@ -10,13 +10,26 @@
 #include "speedsensor.h"
 #include "mpusensor.h"
 
+typedef struct cmd {
+	uint8_t cmd;
+	SensorBase* executer;
+} command;
+
+class Controller;
+
 class BLECallbacks : public BLECharacteristicCallbacks {
+	Controller* parent;
 public:
+	BLECallbacks(Controller* _parent);
 	void onWrite(BLECharacteristic* pCharacteristic);
 };
 
 class Controller {
 private:
+	initializer init_parameters;
+	command commands[COMMAND_ARRAY_SIZE];
+	uint8_t command_count;
+
 	WSWane  *wane_sensor;
 	WSSpeed *speed_sensor;
 	WSMPU   *mpu_sensor;
@@ -32,16 +45,25 @@ private:
 	void BLEReInit();
 	void BLERemove();
 
-#ifdef DEBUG
+	bool EEPROMCheckWaterMark();
+	//void ReadInitParameters();
+	//void WriteInitParameters();
+
+	int CommandAdd(uint8_t _cmd, SensorBase* _executer);
+	int CommandsInit();
+
 	char serial_buffer[SERIAL_BUF_SIZE << 2];
 	int  buflen = 0;
-#endif
 
 public:
 	Controller();
 	~Controller();
 	void MeasureHandler();
 	void HandleBLE();
+	void PrintInitParameters();
+
+	void ExecuteCommand(std::string buf);
+
 #ifdef DEBUG
 	char* Serialize();
 #endif

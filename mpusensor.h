@@ -14,11 +14,12 @@ private:
 	float resultantG;
 
 public:
-	WSMPU();
+	WSMPU(initializer* _init_parameters);
 	~WSMPU();
 	int Handle();
 	char* Serialize();
 	char* SerializeJSON();
+	void ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length);
 };
 
 

@@ -30,7 +30,6 @@ public:
     Speedmapper(struct map* _mappings, int _mapsize, bool _deep_copy = true);
     ~Speedmapper();
     float Map(float rpm);
-
 };
 
 

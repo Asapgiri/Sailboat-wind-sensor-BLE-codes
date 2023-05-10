@@ -1,7 +1,9 @@
+#include <EEPROM.h>
+
 #include "ws_config.h"
 #include "mpusensor.h"
 
-WSMPU::WSMPU() {
+WSMPU::WSMPU(initializer* _init_parameters) : SensorBase(_init_parameters) {
     SPI.begin(MPU_SPI_CLK, MPU_SPI_MISO, MPU_SPI_MOSI, MPU_SPI_CS);
     mpu = new MPU6500_WE(&SPI, MPU_SPI_CS, MPU_USE_SPI);
 
@@ -56,4 +58,13 @@ char* WSMPU::SerializeJSON() {
         gValue.x, gValue.y, gValue.z, gyr.x, gyr.y, gyr.z, temp, resultantG);
     serial_buffer[buflen] = 0;
     return serial_buffer;
+}
+
+void WSMPU::ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length) {
+    mpu->autoOffsets();
+
+    // Write to EEPROM
+    //init_parameters->wane_offset = GetCalibratedOffset();
+    //EEPROM.put(EEPROM_LOC_DATA, *init_parameters);
+    //EEPROM.commit();
 }

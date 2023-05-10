@@ -1,23 +1,36 @@
+#include <EEPROM.h>
 #include "controller.h"
 
 /////////////////////////////////////////////////////////////////////////////////////
 /// BLE
 /////////////////////////////////////////////////////////////////////////////////////
 
+BLECallbacks::BLECallbacks(Controller* _parent) : BLECharacteristicCallbacks() {
+    parent = _parent;
+}
+
 void BLECallbacks::onWrite(BLECharacteristic* pCharacteristic) {
     std::string value = pCharacteristic->getValue();
 
 #ifdef DEBUG
     if (value.length() > 0) {
-        Serial.println("*********");
-        Serial.print("New value: ");
+        Serial.println("=========================================");
+        Serial.print("Incoming value: ");
         for (int i = 0; i < value.length(); i++)
-            Serial.print(value[i]);
+            Serial.printf("%02x", (uint8_t)value[i]);
 
         Serial.println();
-        Serial.println("*********");
+        Serial.println("=========================================");
     }
 #endif
+
+    // Handling incoming command ...
+    // 
+    // Command structure:
+    // [command:uint8_t]#data ...
+    parent->ExecuteCommand(value);
+
+    dprint();
 }
 
 
@@ -25,7 +38,38 @@ void BLECallbacks::onWrite(BLECharacteristic* pCharacteristic) {
 /// Controller
 /////////////////////////////////////////////////////////////////////////////////////
 
+template <class T>
+static void print_array(T* array, int size, const char* line_start, const char* line_end) {
+    int i;
+    for (i = 0; i < size; i++) {
+        Serial.print(line_start);
+        Serial.print(array[i]);
+        Serial.print(line_end);
+    }
+}
+
 /// Private
+
+void Controller::ExecuteCommand(std::string buf) {
+    int i;
+    uint8_t cmd;
+
+    if (COMMAND_SEPARATOR != buf[1]) {
+        derrprint("Failed to execure command: No separator!");
+        return;
+    }
+
+    cmd = (uint8_t)buf[CMD_CMD_LOC];
+    for (i = 0; i < COMMAND_ARRAY_SIZE; i++) {
+        if (commands[i].cmd == cmd) {
+            break;
+        }
+    }
+
+    if (nullptr != commands[i].executer) {
+        commands[i].executer->ExecuteCommand(cmd, buf.c_str() + CMD_DAT_LOC, buf.length() - CMD_DAT_LOC + 1);
+    }
+}
 
 void Controller::BLEInit() {
     dprint("\n");
@@ -38,9 +82,9 @@ void Controller::BLEInit() {
         BLECharacteristic::PROPERTY_READ |
         BLECharacteristic::PROPERTY_WRITE
     );
-    dprint("Service uuid: %s\n", ble_service->getUUID().toString());
+    dprint("Service uuid: %s\n", ble_service->getUUID().toString().c_str());
 
-    ble_callbacks = new BLECallbacks();
+    ble_callbacks = new BLECallbacks(this);
     ble_characteristic->setCallbacks(ble_callbacks);
     ble_characteristic->setValue("{}");
 
@@ -65,20 +109,137 @@ void Controller::BLERemove() {
     delete ble_callbacks;
 }
 
+bool Controller::EEPROMCheckWaterMark() {
+    uint32_t wm;
+    EEPROM.get(EEPROM_LOC_WM, wm);
+
+    if (EEPROM_WATERMARK == wm) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+void Controller::PrintInitParameters() {
+    struct map* wspeed_map;
+    int i, map_location;
+
+    wspeed_map = new struct map[init_parameters.wspeed_map_size];
+    map_location = EEPROM_LOC_DATA + sizeof(init_parameters);
+
+    for (i = 0; i < init_parameters.wspeed_map_size; i++) {
+        EEPROM.get(map_location + i, wspeed_map[i]);
+    }
+
+    Serial.println("=========================================");
+    Serial.println("Printing saved calibration parameters.");
+    Serial.printf ("Filter window:  [%u]\n", init_parameters.filer_window_size);
+    Serial.printf ("Wane offset:    [%u]\n", init_parameters.wane_offset);
+    Serial.println("MPU acc offset: [");
+    print_array(init_parameters.mpu_acc_offset, 6, "                   ", "\n");
+    Serial.println("                ]");
+    Serial.println("MPU gyr offset: [");
+    print_array(init_parameters.mpu_gyr_offset, 3, "                   ", "\n");
+    Serial.println("                ]");
+    Serial.println(init_parameters.mpu_acc_offset[0]);
+    Serial.println("Speedmap: [");
+    for (i = 0; i < init_parameters.wspeed_map_size; i++) {
+        Serial.print("             ");
+        Serial.print(wspeed_map[i].limit);
+        Serial.print(" ");
+        Serial.println(wspeed_map[i].coeffitiant);
+    }
+    Serial.println("          ]");
+    Serial.println("=========================================");
+
+    delete[] wspeed_map;
+}
+
+int Controller::CommandAdd(uint8_t _cmd, SensorBase* _executer) {
+    if (command_count >= COMMAND_ARRAY_SIZE) {
+        derrprint("Commands array is full!!");
+        return 0;
+    }
+    
+    commands[command_count].cmd      = _cmd;
+    commands[command_count].executer = _executer;
+    command_count++;
+
+    return 1;
+}
+
+int Controller::CommandsInit() {
+    uint8_t success_count = 0;
+
+    command_count = 0;
+    success_count += CommandAdd(CMD_PING, nullptr);
+    success_count += CommandAdd(CMD_SET_FILTER_WINDOW, nullptr);
+    success_count += CommandAdd(CMD_SET_WANE_TO_OFFSET, wane_sensor);
+    success_count += CommandAdd(CMD_SET_WANE_TO_CORRENT, wane_sensor);
+    success_count += CommandAdd(CMD_MPU_CALIBRATE, mpu_sensor);
+    success_count += CommandAdd(CMD_SET_SPEEDMAP, speed_sensor);
+
+    dprint("Success with: %u", success_count);
+
+    return success_count;
+}
+
 
 /// Public
 
 Controller::Controller() {
-    wane_sensor = new WSWane();
-    speed_sensor = new WSSpeed();
-    mpu_sensor = new WSMPU();
+    struct map* wspeed_map;
+    int i, map_location;
+
+    /// Initialize EEPROM first
+    EEPROM.begin(EEPROM_SIZE);
+    if (EEPROMCheckWaterMark()) {
+        // The flash is initialized, so we can read out the init parameters.
+        EEPROM.get(EEPROM_LOC_DATA, init_parameters);
+        wspeed_map = new struct map[init_parameters.wspeed_map_size];
+        map_location = EEPROM_LOC_DATA + sizeof(init_parameters);
+        for (i = 0; i < init_parameters.wspeed_map_size; i++) {
+            EEPROM.get(map_location + i, wspeed_map[i]);
+        }
+    }
+    else {
+        init_parameters.filer_window_size = FILTER_WINDOW_SIZE;
+        init_parameters.wane_offset =       0;
+
+        init_parameters.mpu_acc_offset[0];
+
+        init_parameters.wspeed_map_size =   1;
+        wspeed_map = new struct map[init_parameters.wspeed_map_size];
+        map_location = EEPROM_LOC_DATA + sizeof(init_parameters);
+
+        EEPROM.put(EEPROM_LOC_DATA, init_parameters);
+        for (i = 0; i < init_parameters.wspeed_map_size; i++) {
+            wspeed_map[i].limit =       0;
+            wspeed_map[i].coeffitiant = 1;
+            EEPROM.put(map_location + i, wspeed_map[i]);
+        }
+
+        EEPROM.commit();
+    }
+    PrintInitParameters();
+
+    wane_sensor  = new WSWane(&init_parameters);
+    speed_sensor = new WSSpeed(&init_parameters);
+    mpu_sensor   = new WSMPU(&init_parameters);
+
+    speed_sensor->SetMapper(wspeed_map, init_parameters.wspeed_map_size);
+
+    delete[] wspeed_map;
 
     // Initialize filters
-    dprint("Initializeing filters.");
-    for (int i = 0; i < FILTER_WINDOW_SIZE; i++) {
-        this->MeasureHandler();
-        delay(10);
-    }
+    //dprint("Initializeing filters.");
+    //for (int i = 0; i < FILTER_WINDOW_SIZE; i++) {
+    //    this->MeasureHandler();
+    //    delay(10);
+    //}
+
+    CommandsInit();
 
     BLEInit();
 }
@@ -103,9 +264,7 @@ void Controller::HandleBLE() {
         dprint("Reinit...\n");
         BLEReInit();
     }
-    else {
-        ble_count = ble_count_temp;
-    }
+    ble_count = ble_count_temp;
 
     if (ble_count > 0) {
         char* speedbuf = speed_sensor->SerializeJSON();

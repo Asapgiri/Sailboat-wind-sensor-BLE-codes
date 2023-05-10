@@ -13,10 +13,10 @@ private:
 	AS5601*  as_sensor;
 	Filtered<uint32_t> value_adc;
 	float    value_deg;
-	uint32_t offset;
+	uint16_t offset;
 
 public:
-	WSWane();
+	WSWane(initializer* _init_parameters);
 	~WSWane();
 	void CalibrateToRaw(uint16_t raw_pos);
 	void CalibrateToCurrentPos();
@@ -24,6 +24,7 @@ public:
 	int Handle();
 	char* Serialize();
 	char* SerializeJSON();
+	void ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length);
 };
 
 

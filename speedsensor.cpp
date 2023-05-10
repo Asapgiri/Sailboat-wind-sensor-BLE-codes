@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <EEPROM.h>
 
 #include "ws_config.h"
 #include "speedsensor.h"
@@ -67,7 +68,7 @@ uint64_t Tacho::GetTimeEllapsedUntil(uint64_t until) {
 /// WSSpeed
 /////////////////////////////////////////////////////////////////////////////////////
 
-WSSpeed::WSSpeed() {
+WSSpeed::WSSpeed(initializer* _init_parameters) : SensorBase(_init_parameters) {
 	dprint("");
 	t0 = new Tacho(SS_TACHO_0, timeout);
 	t1 = new Tacho(SS_TACHO_1, timeout);
@@ -120,4 +121,39 @@ char* WSSpeed::SerializeJSON() {
 	buflen = sprintf(serial_buffer, "{\"rpm\":%6.2f,\"wind_speed\":%6.2f}", speed_rpm, mapper->Map(speed_rpm));
 	serial_buffer[buflen] = 0;
 	return serial_buffer;
+}
+
+void WSSpeed::SetMapper(struct map* _mappings, int _mapsize, bool _deep_copy) {
+	delete mapper;
+	mapper = new Speedmapper(_mappings, _mapsize, _deep_copy);
+}
+
+// Data should be [mapsize:uint32_t][map[mapsize]:map]
+void WSSpeed::ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length) {
+	uint16_t mapsize = *((uint16_t*)buffer);
+	struct map* maps = (struct map*)(buffer + sizeof(mapsize));
+
+	if ((sizeof(mapsize) + mapsize * sizeof(struct map)) > length) {
+		dprint("Expected lapsize is larger than buffer. (%u - %u)", sizeof(mapsize) + mapsize * sizeof(struct map), length);
+		return;
+	}
+
+#ifdef DEBUG
+	for (int i = 0; i < mapsize; i++) {
+		dprint("Got value: [%.2f %.2f]", maps[i].limit, maps[i].coeffitiant);
+	}
+#endif
+
+	// TODO: Also set from text input?? Is it really needed?
+	SetMapper(maps, mapsize);
+
+	// Write to EEPROM
+	int i, map_location = EEPROM_LOC_DATA + sizeof(init_parameters);
+	init_parameters->wspeed_map_size = mapsize;
+	EEPROM.put(EEPROM_LOC_DATA, *init_parameters);
+	for (i = 0; i < init_parameters->wspeed_map_size; i++) {
+		EEPROM.put(map_location + i, maps[i]);
+	}
+
+	EEPROM.commit();
 }

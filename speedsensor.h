@@ -9,7 +9,7 @@
 #define diff(newt, oldt) UDiffTime(newt, oldt)
 #define second			 1000000		// microseconds in a second
 #define minute			 60000000.0f	// microseconds in a minute
-#define timeout			 (3 * second)
+#define timeout			 (.3f * second)
 
 class Tacho {
 private:
@@ -41,11 +41,13 @@ private:
 	Speedmapper* mapper;
 
 public:
-	WSSpeed();
+	WSSpeed(initializer* _init_parameters);
 	~WSSpeed();
 	int Handle();
 	char* Serialize();
 	char* SerializeJSON();
+	void SetMapper(struct map* _mappings, int _mapsize, bool _deep_copy = true);
+	void ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length);
 };
 
 

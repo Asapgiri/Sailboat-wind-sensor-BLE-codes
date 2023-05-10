@@ -58,4 +58,6 @@ void loop() {
         timeing = millis();
     }
 #endif
+
+    delay(10);
 }
