@@ -1,9 +1,7 @@
-#include <EEPROM.h>
-
 #include "ws_config.h"
 #include "mpusensor.h"
 
-WSMPU::WSMPU(initializer* _init_parameters) : SensorBase(_init_parameters) {
+WSMPU::WSMPU(Initializer* _init_parameters) : SensorBase(_init_parameters) {
     SPI.begin(MPU_SPI_CLK, MPU_SPI_MISO, MPU_SPI_MOSI, MPU_SPI_CS);
     mpu = new MPU6500_WE(&SPI, MPU_SPI_CS, MPU_USE_SPI);
 

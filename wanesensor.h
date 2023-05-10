@@ -16,7 +16,7 @@ private:
 	uint16_t offset;
 
 public:
-	WSWane(initializer* _init_parameters);
+	WSWane(Initializer* _init_parameters);
 	~WSWane();
 	void CalibrateToRaw(uint16_t raw_pos);
 	void CalibrateToCurrentPos();

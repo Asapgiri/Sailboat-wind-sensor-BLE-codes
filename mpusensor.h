@@ -14,7 +14,7 @@ private:
 	float resultantG;
 
 public:
-	WSMPU(initializer* _init_parameters);
+	WSMPU(Initializer* _init_parameters);
 	~WSMPU();
 	int Handle();
 	char* Serialize();

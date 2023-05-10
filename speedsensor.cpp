@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <EEPROM.h>
-
 #include "ws_config.h"
 #include "speedsensor.h"
 #include "common.h"
@@ -68,7 +66,7 @@ uint64_t Tacho::GetTimeEllapsedUntil(uint64_t until) {
 /// WSSpeed
 /////////////////////////////////////////////////////////////////////////////////////
 
-WSSpeed::WSSpeed(initializer* _init_parameters) : SensorBase(_init_parameters) {
+WSSpeed::WSSpeed(Initializer* _init_parameters) : SensorBase(_init_parameters) {
 	dprint("");
 	t0 = new Tacho(SS_TACHO_0, timeout);
 	t1 = new Tacho(SS_TACHO_1, timeout);
@@ -148,12 +146,7 @@ void WSSpeed::ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length) {
 	SetMapper(maps, mapsize);
 
 	// Write to EEPROM
-	int i, map_location = EEPROM_LOC_DATA + sizeof(init_parameters);
-	init_parameters->wspeed_map_size = mapsize;
-	EEPROM.put(EEPROM_LOC_DATA, *init_parameters);
-	for (i = 0; i < init_parameters->wspeed_map_size; i++) {
-		EEPROM.put(map_location + i, maps[i]);
-	}
-
-	EEPROM.commit();
+	init_parameters->SetSpeedmapSize(mapsize);
+	init_parameters->Save();
+	init_parameters->Save(maps);
 }

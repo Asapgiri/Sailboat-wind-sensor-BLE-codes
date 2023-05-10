@@ -41,7 +41,7 @@ private:
 	Speedmapper* mapper;
 
 public:
-	WSSpeed(initializer* _init_parameters);
+	WSSpeed(Initializer* _init_parameters);
 	~WSSpeed();
 	int Handle();
 	char* Serialize();

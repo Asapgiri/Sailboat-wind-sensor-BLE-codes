@@ -1,10 +1,8 @@
-#include <EEPROM.h>
-
 #include "ws_config.h"
 #include "wanesensor.h"
 #include "filtering.cpp" // c compiler and arduino is garbage with templates
 
-WSWane::WSWane(initializer* _init_parameters) : SensorBase(_init_parameters) {
+WSWane::WSWane(Initializer* _init_parameters) : SensorBase(_init_parameters) {
     i2c_wire = new TwoWire(WANE_I2C_WIRE);
     i2c_wire->begin(WANE_I2C_SDA, WANE_I2C_SCL);
 
@@ -12,7 +10,7 @@ WSWane::WSWane(initializer* _init_parameters) : SensorBase(_init_parameters) {
 
 //    value_adc = new Filtered<uint32_t>();
     value_deg = 0.0f;
-    CalibrateToRaw(init_parameters->wane_offset);
+    CalibrateToRaw(init_parameters->GetWaneOffset());
 }
 
 WSWane::~WSWane() {
@@ -75,7 +73,6 @@ void WSWane::ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length) {
     dprint("Calibrated to %u", GetCalibratedOffset());
 
     // Write to EEPROM
-    init_parameters->wane_offset = GetCalibratedOffset();
-    EEPROM.put(EEPROM_LOC_DATA, *init_parameters);
-    EEPROM.commit();
+    init_parameters->SetWaneOffset(GetCalibratedOffset());
+    init_parameters->Save();
 }

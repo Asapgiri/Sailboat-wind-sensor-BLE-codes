@@ -19,22 +19,50 @@
 #endif
 
 
-typedef struct initer {
+struct initer {
 	uint16_t filer_window_size;
 	uint16_t wane_offset;
 	float	 mpu_acc_offset[6];
 	float	 mpu_gyr_offset[3];
-	uint16_t wspeed_map_size;
-} initializer;
+	uint16_t wspeedmap_size;
+};
+
+class Initializer {
+private:
+	struct initer inits;
+	//struct map* map = nullptr;
+
+	bool WaterMarkExists();
+
+public:
+
+	Initializer();
+	// map musn't be unitialized if not nullptr!!! Must match init params!
+	void Save(struct map* map = nullptr);
+	// map musn't be unitialized if not nullptr!!! Must match init params!
+	void Load(struct map* map = nullptr);
+	//void Cleanup();
+	void Print();
+
+	// Getters
+	uint16_t GetFilterWindowSize();
+	uint16_t GetWaneOffset();
+	uint16_t GetSpeedmapSize();
+
+	// Setters
+	void SetFilterWindowSize(uint16_t value);
+	void SetWaneOffset(uint16_t value);
+	void SetSpeedmapSize(uint16_t value);
+};
 
 class SensorBase
 {
 protected:
-	initializer* init_parameters;
+	Initializer* init_parameters;
 	char serial_buffer[SERIAL_BUF_SIZE];
 	int  buflen = 0;
 public:
-	SensorBase(initializer* _init_parameters) { init_parameters = _init_parameters; }
+	SensorBase(Initializer* _init_parameters) { init_parameters = _init_parameters; }
 	virtual char* Serialize() = 0;
 	virtual char* SerializeJSON() = 0;
 	virtual int Handle() = 0;

@@ -26,7 +26,7 @@ public:
 
 class Controller {
 private:
-	initializer init_parameters;
+	Initializer init_parameters;
 	command commands[COMMAND_ARRAY_SIZE];
 	uint8_t command_count;
 
@@ -44,10 +44,6 @@ private:
 	void BLEInit();
 	void BLEReInit();
 	void BLERemove();
-
-	bool EEPROMCheckWaterMark();
-	//void ReadInitParameters();
-	//void WriteInitParameters();
 
 	int CommandAdd(uint8_t _cmd, SensorBase* _executer);
 	int CommandsInit();

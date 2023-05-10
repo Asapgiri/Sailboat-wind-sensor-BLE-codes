@@ -1,4 +1,3 @@
-#include <EEPROM.h>
 #include "controller.h"
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -37,16 +36,6 @@ void BLECallbacks::onWrite(BLECharacteristic* pCharacteristic) {
 /////////////////////////////////////////////////////////////////////////////////////
 /// Controller
 /////////////////////////////////////////////////////////////////////////////////////
-
-template <class T>
-static void print_array(T* array, int size, const char* line_start, const char* line_end) {
-    int i;
-    for (i = 0; i < size; i++) {
-        Serial.print(line_start);
-        Serial.print(array[i]);
-        Serial.print(line_end);
-    }
-}
 
 /// Private
 
@@ -109,53 +98,6 @@ void Controller::BLERemove() {
     delete ble_callbacks;
 }
 
-bool Controller::EEPROMCheckWaterMark() {
-    uint32_t wm;
-    EEPROM.get(EEPROM_LOC_WM, wm);
-
-    if (EEPROM_WATERMARK == wm) {
-        return true;
-    }
-    else {
-        return false;
-    }
-}
-
-void Controller::PrintInitParameters() {
-    struct map* wspeed_map;
-    int i, map_location;
-
-    wspeed_map = new struct map[init_parameters.wspeed_map_size];
-    map_location = EEPROM_LOC_DATA + sizeof(init_parameters);
-
-    for (i = 0; i < init_parameters.wspeed_map_size; i++) {
-        EEPROM.get(map_location + i, wspeed_map[i]);
-    }
-
-    Serial.println("=========================================");
-    Serial.println("Printing saved calibration parameters.");
-    Serial.printf ("Filter window:  [%u]\n", init_parameters.filer_window_size);
-    Serial.printf ("Wane offset:    [%u]\n", init_parameters.wane_offset);
-    Serial.println("MPU acc offset: [");
-    print_array(init_parameters.mpu_acc_offset, 6, "                   ", "\n");
-    Serial.println("                ]");
-    Serial.println("MPU gyr offset: [");
-    print_array(init_parameters.mpu_gyr_offset, 3, "                   ", "\n");
-    Serial.println("                ]");
-    Serial.println(init_parameters.mpu_acc_offset[0]);
-    Serial.println("Speedmap: [");
-    for (i = 0; i < init_parameters.wspeed_map_size; i++) {
-        Serial.print("             ");
-        Serial.print(wspeed_map[i].limit);
-        Serial.print(" ");
-        Serial.println(wspeed_map[i].coeffitiant);
-    }
-    Serial.println("          ]");
-    Serial.println("=========================================");
-
-    delete[] wspeed_map;
-}
-
 int Controller::CommandAdd(uint8_t _cmd, SensorBase* _executer) {
     if (command_count >= COMMAND_ARRAY_SIZE) {
         derrprint("Commands array is full!!");
@@ -190,45 +132,18 @@ int Controller::CommandsInit() {
 
 Controller::Controller() {
     struct map* wspeed_map;
-    int i, map_location;
 
-    /// Initialize EEPROM first
-    EEPROM.begin(EEPROM_SIZE);
-    if (EEPROMCheckWaterMark()) {
-        // The flash is initialized, so we can read out the init parameters.
-        EEPROM.get(EEPROM_LOC_DATA, init_parameters);
-        wspeed_map = new struct map[init_parameters.wspeed_map_size];
-        map_location = EEPROM_LOC_DATA + sizeof(init_parameters);
-        for (i = 0; i < init_parameters.wspeed_map_size; i++) {
-            EEPROM.get(map_location + i, wspeed_map[i]);
-        }
-    }
-    else {
-        init_parameters.filer_window_size = FILTER_WINDOW_SIZE;
-        init_parameters.wane_offset =       0;
-
-        init_parameters.mpu_acc_offset[0];
-
-        init_parameters.wspeed_map_size =   1;
-        wspeed_map = new struct map[init_parameters.wspeed_map_size];
-        map_location = EEPROM_LOC_DATA + sizeof(init_parameters);
-
-        EEPROM.put(EEPROM_LOC_DATA, init_parameters);
-        for (i = 0; i < init_parameters.wspeed_map_size; i++) {
-            wspeed_map[i].limit =       0;
-            wspeed_map[i].coeffitiant = 1;
-            EEPROM.put(map_location + i, wspeed_map[i]);
-        }
-
-        EEPROM.commit();
-    }
-    PrintInitParameters();
+    init_parameters.Load();
+    init_parameters.Print();
 
     wane_sensor  = new WSWane(&init_parameters);
     speed_sensor = new WSSpeed(&init_parameters);
     mpu_sensor   = new WSMPU(&init_parameters);
 
-    speed_sensor->SetMapper(wspeed_map, init_parameters.wspeed_map_size);
+    wspeed_map = new struct map[init_parameters.GetSpeedmapSize()];
+    init_parameters.Load(wspeed_map);
+
+    speed_sensor->SetMapper(wspeed_map, init_parameters.GetSpeedmapSize());
 
     delete[] wspeed_map;
 
