@@ -19,6 +19,11 @@
 #endif
 
 
+struct buf {
+	unsigned int len;
+	void* buf;
+};
+
 struct initer {
 	uint16_t filer_window_size;
 	uint16_t wane_offset;
@@ -65,6 +70,7 @@ public:
 	SensorBase(Initializer* _init_parameters) { init_parameters = _init_parameters; }
 	virtual char* Serialize() = 0;
 	virtual char* SerializeJSON() = 0;
+	virtual struct buf* SerializeBLE() = 0;
 	virtual int Handle() = 0;
 	virtual void ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length) = 0;
 };
@@ -81,6 +87,19 @@ static uint64_t UDiffTime(uint64_t newTime, uint64_t oldTime) {
 
 	return diff;
 }
+
+class StopWatch {
+	bool running = false;
+	uint64_t start = 0;
+	uint64_t end = 0;
+	uint64_t diff = 0;
+
+public:
+	void Start();
+	void Stop();
+	uint64_t EllapsedUS();
+	float EllapsedS();
+};
 
 
 #endif

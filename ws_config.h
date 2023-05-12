@@ -1,8 +1,8 @@
 #ifndef WS_PINCONFIG
 #define WS_PINCONFIG
 
-#define DEBUG
-#define DPRINT_TIMEOUT  1000
+//#define DEBUG
+#define DPRINT_w_timeout  1000
 #define DTIME_UNIT      "us"
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -48,6 +48,15 @@
 #define EEPROM_WATERMARK    1775
 #define EEPROM_LOC_WM       0
 #define EEPROM_LOC_DATA     4
+
+
+#define diff(newt, oldt) UDiffTime(newt, oldt)
+#define w_second			 1000000		// microw_seconds in a w_second
+#define w_minute			 60000000.0f	// microw_seconds in a w_minute
+#define w_timeout			 (.4f * w_second)
+#define w_timeout_s			 (.4f * 1.0f)
+
+#define RAD_TO_DEG 57.2957795131
 
 
 /////////////////////////////////////////////////////////////////////////////////////

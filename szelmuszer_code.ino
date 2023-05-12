@@ -45,7 +45,7 @@ void loop() {
 #endif
 
 #ifdef DEBUG
-    if ((timeing + DPRINT_TIMEOUT) < millis()) {
+    if ((timeing + DPRINT_w_timeout) < millis()) {
         Serial.print("Measurements: ");
         serialize_start = dgettime();
         Serial.print(controller->Serialize());

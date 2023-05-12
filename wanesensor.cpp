@@ -53,6 +53,16 @@ char* WSWane::SerializeJSON() {
     return serial_buffer;
 }
 
+struct buf* WSWane::SerializeBLE() {
+    wbuf.adc = value_adc.GetFilteredValut();
+    wbuf.deg = value_deg;
+
+    sbuf.len = sizeof(struct wanebuf);
+    sbuf.buf = &wbuf;
+    
+    return &sbuf;
+}
+
 // Data should be raw uint16_t or empty...
 void WSWane::ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length) {
     uint16_t raw;

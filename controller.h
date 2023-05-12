@@ -17,6 +17,7 @@ typedef struct cmd {
 
 class Controller;
 
+
 class BLECallbacks : public BLECharacteristicCallbacks {
 	Controller* parent;
 public:
@@ -29,6 +30,14 @@ private:
 	Initializer init_parameters;
 	command commands[COMMAND_ARRAY_SIZE];
 	uint8_t command_count;
+
+	struct buf* b_speedbuf;
+	struct buf* b_wanebuf;
+	struct buf* b_mpubuf;
+	char* c_speedbuf;
+	char* c_wanebuf;
+	char* c_mpubuf;
+	size_t bufsize;
 
 	WSWane  *wane_sensor;
 	WSSpeed *speed_sensor;

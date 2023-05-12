@@ -42,12 +42,13 @@ bool Tacho::GetValue() {
 	return value;
 }
 
-float Tacho::GetRPM() {
+struct vfloat Tacho::GetRPM() {
 	uint64_t time = micros();
-	float rpm = 0.0f;
+	struct vfloat rpm = { 0.0f, false };
 
 	if (diff(time, time_of_change) < time_out) {
-		rpm = minute / (float)time_ellapsed.GetFilteredValut();
+		rpm.value = w_minute / (float)time_ellapsed.GetFilteredValut();
+		rpm.is_valid = true;
 	}
 
 	return rpm;
@@ -68,9 +69,9 @@ uint64_t Tacho::GetTimeEllapsedUntil(uint64_t until) {
 
 WSSpeed::WSSpeed(Initializer* _init_parameters) : SensorBase(_init_parameters) {
 	dprint("");
-	t0 = new Tacho(SS_TACHO_0, timeout);
-	t1 = new Tacho(SS_TACHO_1, timeout);
-	t2 = new Tacho(SS_TACHO_2, timeout);
+	t0 = new Tacho(SS_TACHO_0, w_timeout);
+	t1 = new Tacho(SS_TACHO_1, w_timeout);
+	t2 = new Tacho(SS_TACHO_2, w_timeout);
 
 	// TODO: Init from EEPROM
 	struct map smap = { 0.0f, 0.1f };
@@ -100,7 +101,21 @@ int WSSpeed::Handle() {
 	// TODO: Make error correction if one of the buffers are waay off...
 	//		 This is ignored for the time beeing..
 	//dprint("Read rpm[%6.2f %6.2f %6.2f]: ", speed_buf[0], speed_buf[1], speed_buf[2]);
-	speed_rpm = AverageFilter<float>(speed_buf, 3, 0);
+	
+	sum = 0;
+	cnt = 0;
+	for (i = 0; i < 3; i++) {
+		if (speed_buf[i].is_valid) {
+			sum += speed_buf[i].value;
+			cnt++;
+		}
+	}
+	if (cnt) {
+		speed_rpm = sum / cnt;
+	}
+	else {
+		speed_rpm = 0.0f;
+	}
 	//dprint("%6.2f.\n", speed_rpm);
 
 	return HANDLER_OK;
@@ -110,7 +125,7 @@ int WSSpeed::Handle() {
 * TODO: return times or etc...
 */
 char* WSSpeed::Serialize() {
-	buflen = sprintf(serial_buffer, "0b%u%u%u: rpm: %6.2f, ws: %6.2f", t0->GetValue(), t1->GetValue(), t2->GetValue(), speed_rpm, mapper->Map(speed_rpm));
+	buflen = sprintf(serial_buffer, "0b%u%u%u: rpm: %6.2f, kmh: %6.2f", t0->GetValue(), t1->GetValue(), t2->GetValue(), speed_rpm, mapper->Map(speed_rpm));
 	serial_buffer[buflen] = 0;
 	return serial_buffer;
 }
@@ -119,6 +134,19 @@ char* WSSpeed::SerializeJSON() {
 	buflen = sprintf(serial_buffer, "{\"rpm\":%6.2f,\"wind_speed\":%6.2f}", speed_rpm, mapper->Map(speed_rpm));
 	serial_buffer[buflen] = 0;
 	return serial_buffer;
+}
+
+struct buf* WSSpeed::SerializeBLE() {
+	wbuf.pinups = t0->GetValue();
+	wbuf.pinups |= t1->GetValue() << 1;
+	wbuf.pinups |= t2->GetValue() << 2;
+	wbuf.rpm = speed_rpm;
+	wbuf.kmh = mapper->Map(speed_rpm);
+
+	sbuf.len = sizeof(struct speedbuf);
+	sbuf.buf = &wbuf;
+
+	return &sbuf;
 }
 
 void WSSpeed::SetMapper(struct map* _mappings, int _mapsize, bool _deep_copy) {

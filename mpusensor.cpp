@@ -36,26 +36,85 @@ WSMPU::~WSMPU() {
 }
 
 int WSMPU::Handle() {
-    gValue  = mpu->getGValues();
-    gyr = mpu->getGyrValues();
+    //sw_time.Stop();
+    //gValue  = mpu->getGValues();
+    //gyr = mpu->getGyrValues();
     temp = mpu->getTemperature();
-    resultantG = mpu->getResultantG(gValue);
+    //resultantG = mpu->getResultantG(gValue);
+    angles = mpu->getAngles();
+    ori.roll = mpu->getRoll();
+    ori.pitch = mpu->getPitch();
 
+    // Copied from: https://github.com/natanaeljr/esp32-MPU-driver/blob/master/examples/mpu_real/main/mpu_real.cpp
+    //constexpr double kRadToDeg = 57.2957795131;
+    //constexpr float kDeltaTime = 1.f / kSampleRate;
+    //float gyroRoll = roll + mpud::math::gyroDegPerSec(rawGyro.x, kGyroFS) * kDeltaTime;
+    //float gyroPitch = pitch + mpud::math::gyroDegPerSec(rawGyro.y, kGyroFS) * kDeltaTime;
+    //float gyroYaw = yaw + mpud::math::gyroDegPerSec(rawGyro.z, kGyroFS) * kDeltaTime;
+    //float accelRoll = atan2(-rawAccel.x, rawAccel.z) * kRadToDeg;
+    //float accelPitch = atan2(rawAccel.y, sqrt(rawAccel.x * rawAccel.x + rawAccel.z * rawAccel.z)) * kRadToDeg;
+    //// Fusion
+    //roll = gyroRoll * 0.95f + accelRoll * 0.05f;
+    //pitch = gyroPitch * 0.95f + accelPitch * 0.05f;
+    //yaw = gyroYaw;
+
+
+    //dt = sw_time.EllapsedS();
+    //dprint("dt: %fs", dt);
+    //if (dt < w_timeout_s) {
+    //    gyro.roll = ori.roll + deg_per_sec(gyr.x) * dt;
+    //    gyro.pitch = ori.pitch + deg_per_sec(gyr.y) * dt;
+    //    gyro.yaw = ori.yaw + deg_per_sec(gyr.z) * dt;
+    //    accel.roll = atan2(-gValue.x, gValue.z) * RAD_TO_DEG;
+    //    accel.pitch = atan2(gValue.x, sqrt(gValue.x * gValue.x + gValue.z * gValue.z)) * RAD_TO_DEG;
+    //    
+    //    ori.roll = gyro.roll * 0.95f + accel.roll * 0.05f;
+    //    ori.pitch = gyro.pitch * 0.95f + accel.pitch * 0.05f;
+    //    ori.yaw = gyro.yaw;
+    //    dprint("grpy[%f %f %f] acc[%f %f] orient[%f %f %f]",
+    //        gyro.roll, gyro.pitch, gyro.yaw, accel.roll, accel.pitch, ori.roll, ori.pitch, ori.yaw);
+    //}
+
+    //sw_time.Start();
     return HANDLER_OK;
 }
 
 char* WSMPU::Serialize() {
-    buflen = sprintf(serial_buffer, "[%7.2f %7.2f %7.2f %7.2f %7.2f %7.2f %6.2f], temp: %6.2fdegC",
-        gValue.x, gValue.y, gValue.z, gyr.x, gyr.y, gyr.z, resultantG, temp);
-    serial_buffer[buflen] = 0;
+    //buflen = sprintf(serial_buffer, "[%7.2f %7.2f %7.2f %7.2f %7.2f %7.2f %6.2f], temp: %6.2fdegC",
+    //    gValue.x, gValue.y, gValue.z, gyr.x, gyr.y, gyr.z, resultantG, temp);
+    //serial_buffer[buflen] = 0;
+    serial_buffer[0] = 0;
     return serial_buffer;
 }
 
 char* WSMPU::SerializeJSON() {
-    buflen = sprintf(serial_buffer, "{\"acc\":[%.2f,%.2f,%.2f,%.2f,%.2f,%.2f],\"temp\":%.2f,\"resultantG\":%.2f}",
-        gValue.x, gValue.y, gValue.z, gyr.x, gyr.y, gyr.z, temp, resultantG);
-    serial_buffer[buflen] = 0;
+    //buflen = sprintf(serial_buffer, "{\"acc\":[%.2f,%.2f,%.2f,%.2f,%.2f,%.2f],\"temp\":%.2f,\"resultantG\":%.2f}",
+    //    gValue.x, gValue.y, gValue.z, gyr.x, gyr.y, gyr.z, temp, resultantG);
+    //serial_buffer[buflen] = 0;
+    serial_buffer[0] = 0;
     return serial_buffer;
+}
+
+struct buf* WSMPU::SerializeBLE() {
+    wbuf.temp = temp;
+    wbuf.angles.x = angles.x;
+    wbuf.angles.z = angles.y;
+    wbuf.angles.y = angles.z;
+    wbuf.orient.roll  = ori.roll;
+    wbuf.orient.pitch = ori.pitch;
+    //wbuf.orient.yaw   = ori.yaw;
+    //wbuf.gval.x = gValue.x;
+    //wbuf.gval.y = gValue.y;
+    //wbuf.gval.z = gValue.z;
+    //wbuf.gyr.x = gyr.x;
+    //wbuf.gyr.y = gyr.y;
+    //wbuf.gyr.z = gyr.z;
+    //wbuf.resg = resultantG;
+
+    sbuf.len = sizeof(struct mpubuf);
+    sbuf.buf = &wbuf;
+
+    return &sbuf;
 }
 
 void WSMPU::ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length) {

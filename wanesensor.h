@@ -7,7 +7,14 @@
 #include "common.h"
 #include "filtering.h"
 
+struct wanebuf {
+	uint32_t adc;
+	float	 deg;
+};
+
 class WSWane : public SensorBase {
+	struct buf     sbuf;
+	struct wanebuf wbuf;
 private:
 	TwoWire* i2c_wire;
 	AS5601*  as_sensor;
@@ -24,6 +31,7 @@ public:
 	int Handle();
 	char* Serialize();
 	char* SerializeJSON();
+	struct buf* SerializeBLE();
 	void ExecuteCommand(uint8_t cmd, const char* buffer, uint32_t length);
 };
 

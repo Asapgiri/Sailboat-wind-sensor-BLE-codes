@@ -148,3 +148,29 @@ void Initializer::SetSpeedmapSize(uint16_t value) {
     inits.wspeedmap_size = value;
 }
 
+
+
+void StopWatch::Start() {
+    start = micros();
+    running = true;
+}
+
+void StopWatch::Stop() {
+    end = micros();
+    running = false;
+}
+
+uint64_t StopWatch::EllapsedUS() {
+    if (running) {
+        diff = UDiffTime(micros(), start);
+    }
+    else {
+        diff = UDiffTime(end, start);
+    }
+    return diff;
+}
+
+float StopWatch::EllapsedS() {
+    EllapsedUS();
+    return (float)diff / (float)w_second;
+}

@@ -1,3 +1,4 @@
+#include <string.h>
 #include "controller.h"
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -182,26 +183,34 @@ void Controller::HandleBLE() {
     ble_count = ble_count_temp;
 
     if (ble_count > 0) {
-        char* speedbuf = speed_sensor->SerializeJSON();
-        char* wanebuf = wane_sensor->SerializeJSON();
-        char* mpubuf = mpu_sensor->SerializeJSON();
+        b_speedbuf = speed_sensor->SerializeBLE();
+        b_wanebuf = wane_sensor->SerializeBLE();
+        b_mpubuf = mpu_sensor->SerializeBLE();
+        
+        //dprint("Bufsize: %u", b_speedbuf->len);
+        //dprint("Bufsize: %u", b_wanebuf->len);
+        //dprint("Bufsize: %u", b_mpubuf->len);
 
-        buflen = sprintf(serial_buffer, "{\"speed\":%s,\"wane\":%s,\"mpu\":%s}", speedbuf, wanebuf, mpubuf);
-        serial_buffer[buflen] = 0;
+#define cpybuf(buf0) memcpy(serial_buffer + bufsize, buf0->buf, buf0->len); bufsize += buf0->len
 
-        //Serial.println(serial_buffer);
-        ble_characteristic->setValue(serial_buffer);
+        bufsize = 0;
+        cpybuf(b_speedbuf);
+        cpybuf(b_wanebuf);
+        cpybuf(b_mpubuf);
+
+        // Serial.println(serial_buffer);
+        ble_characteristic->setValue((uint8_t*)serial_buffer, bufsize);
         ble_characteristic->notify();
     }
 }
 
 #ifdef DEBUG
 char* Controller::Serialize() {
-    char* speedbuf = speed_sensor->Serialize();
-    char* wanebuf  = wane_sensor->Serialize();
-    char* mpubuf   = mpu_sensor->Serialize();
+    c_speedbuf = speed_sensor->Serialize();
+    c_wanebuf = wane_sensor->Serialize();
+    c_mpubuf = mpu_sensor->Serialize();
 
-    buflen = sprintf(serial_buffer, "wane: (%s) -- mpu: (%s) -- wind speed: (%s)", wanebuf, mpubuf, speedbuf);
+    buflen = sprintf(serial_buffer, "wane: (%s) -- mpu: (%s) -- wind speed: (%s)", c_wanebuf, c_mpubuf, c_speedbuf);
     serial_buffer[buflen] = 0;
 
     return serial_buffer;
