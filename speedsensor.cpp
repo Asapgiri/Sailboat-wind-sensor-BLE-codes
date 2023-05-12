@@ -74,7 +74,7 @@ WSSpeed::WSSpeed(Initializer* _init_parameters) : SensorBase(_init_parameters) {
 	t2 = new Tacho(SS_TACHO_2, w_timeout);
 
 	// TODO: Init from EEPROM
-	struct map smap = { 0.0f, 0.1f };
+	struct map smap = { 0.0f, 0.016f };
 	mapper = new Speedmapper(&smap, 1);
 
 	time	  = micros();
